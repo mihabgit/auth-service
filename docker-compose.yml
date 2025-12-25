@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: auth-postgres
+    environment:
+      POSTGRES_DB: authdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - auth-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: auth-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - auth-network
+
+  auth-service:
+    build: .
+    container_name: auth-service
+    environment:
+      PROFILE: dev
+      DB_URL: jdbc:postgresql://postgres:5432/authdb
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      REDIS_HOST: redis
+      JWT_SECRET: 295a48c13ac272c6d76a3c4fc6b4069c09e6ab67d3857cf3d771c88bcdcaa4741353a92e093e1470347deb78999847cee65e83cf27fecdf64e7c474ce8ac1fa8
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      JAVA_TOOL_OPTIONS:
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+
+    ports:
+      - "20001:20001"
+      - "5005:5005"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - auth-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:20001/auth-service/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+networks:
+  auth-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

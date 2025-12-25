@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: auth-service
+
+  profiles:
+    active: ${PROFILE:dev}
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/authdb
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc.batch_size: 20
+        order_inserts: true
+        order_updates: true
+    show_sql: false
+
+server:
+  port: ${PORT:20001}
+  servlet:
+    context-path: /auth-service
+
+jwt:
+  secret: 295a48c13ac272c6d76a3c4fc6b4069c09e6ab67d3857cf3d771c88bcdcaa4741353a92e093e1470347deb78999847cee65e83cf27fecdf64e7c474ce8ac1fa8
+  access-token-expiration: 900000
+  refresh-token-expiration: 604800000
+  issuer: auth-service
+
+
+
+
+
+
+
+
