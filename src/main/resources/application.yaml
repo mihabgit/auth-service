@@ -35,11 +35,3 @@ jwt:
   access-token-expiration: 900000
   refresh-token-expiration: 604800000
   issuer: auth-service
-
-
-
-
-
-
-
-
