@@ -2,7 +2,7 @@ package com.imran.authservice.exception;
 
 public class ResourceNotFoundException extends RuntimeException {
 
-    ResourceNotFoundException(String message) {
+    public ResourceNotFoundException(String message) {
         super(message);
     }
 

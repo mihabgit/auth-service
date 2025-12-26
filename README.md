@@ -341,3 +341,17 @@ curl -X GET http://localhost:8080/auth-service/api/v1/auth/me \
   "path": "/api/v1/auth/login"
 }
 ```
+
+### Contributing
+```aiignore
+Fork the repository
+Create a feature branch
+Commit your changes
+Push to the branch
+Create a Pull Request
+```
+
+### Support
+For support, email [imranhmihab@gmail] or create an issue in the GitHub repository.
+
+Built with ❤️ using Spring Boot & Microservices Architecture.

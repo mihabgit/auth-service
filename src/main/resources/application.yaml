@@ -25,6 +25,13 @@ spring:
         order_updates: true
     show_sql: false
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      password: ${REDIS_PASSWORD:}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+
 server:
   port: ${PORT:20001}
   servlet:
@@ -35,3 +42,14 @@ jwt:
   access-token-expiration: 900000
   refresh-token-expiration: 604800000
   issuer: auth-service
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha

@@ -8,6 +8,7 @@ import com.imran.authservice.dto.UserDto;
 import com.imran.authservice.enums.UserStatus;
 import com.imran.authservice.exception.InvalidTokenException;
 import com.imran.authservice.exception.ResourceAlreadyExistsException;
+import com.imran.authservice.exception.ResourceNotFoundException;
 import com.imran.authservice.model.RefreshToken;
 import com.imran.authservice.model.User;
 import com.imran.authservice.repository.RefreshTokenRepository;
@@ -22,6 +23,7 @@ import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +42,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final JwtConfig jwtConfig;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Value("${security.max-failed-attempts:5}")
     private int maxFailedAttempts;
@@ -132,14 +135,68 @@ public class AuthService {
     }
 
     @Transactional
-    public String logout(String refreshToken) {
-        RefreshToken storedToken = refreshTokenRepository.findByToken(refreshToken)
-                .orElseThrow(() -> new InvalidTokenException("Invalid refresh token"));
+    public String logout(String refreshToken, String accessToken) {
+        log.info("Logout requested - blacklisting tokens");
 
-        storedToken.setRevoked(true);
-        storedToken.setRevokedAt(LocalDateTime.now());
-        refreshTokenRepository.save(storedToken);
+        // Blacklist the access token
+        if (accessToken != null && !accessToken.isEmpty()) {
+            tokenBlacklistService.blacklistToken(accessToken);
+            log.debug("Access token blacklisted: {}", accessToken);
+        }
+
+        // Handle refresh token logout
+        if (refreshToken != null && !refreshToken.isEmpty()) {
+            try {
+                RefreshToken storedToken = refreshTokenRepository.findByToken(refreshToken)
+                        .orElseThrow(() -> new InvalidTokenException("Invalid refresh token"));
+
+                storedToken.setRevoked(true);
+                storedToken.setRevokedAt(LocalDateTime.now());
+                refreshTokenRepository.save(storedToken);
+
+                log.debug("Refresh token revoked: {}", refreshToken);
+            } catch (InvalidTokenException e) {
+                log.warn("Invalid refresh token during logout: {}", e.getMessage());
+            }
+        }
+
+        // Clear security context
+        SecurityContextHolder.clearContext();
         return "Successfully logged out.";
+    }
+
+    @Transactional(readOnly = true)
+    public UserDto getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            log.warn("No authenticated user found");
+            throw new ResourceNotFoundException("No authenticated user found!");
+        }
+
+        Object principal = authentication.getPrincipal();
+        String username;
+
+        if (principal instanceof UserDetails) {
+            username = ((UserDetails) principal).getUsername();
+        } else if (principal instanceof String) {
+            username = (String) principal;
+        } else {
+            log.error("Unknown principal type: {}", principal.getClass().getName());
+            throw new ResourceNotFoundException("Unable to determine current user");
+        }
+
+        log.debug("Getting current user with username {}", username);
+
+        User user = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByUsername(username)
+                        .orElseThrow(() -> {
+                            log.error("User not found in database: {}", username);
+                            return new ResourceNotFoundException("User not found");
+                        }));
+
+        return mapToUserDto(user);
+
     }
 
     private RefreshToken createRefreshToken(User user, String ipAddress, String userAgent) {
@@ -178,14 +235,3 @@ public class AuthService {
     }
 
 }
-
-
-
-
-
-
-
-
-
-
-
